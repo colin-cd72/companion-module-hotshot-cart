@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "name": "hotshot-cart",
+  "shortname": "hotshot-cart",
+  "manufacturer": "Colin DeFord",
+  "product": ["HotShot Cart"],
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "git+https://github.com/companion/companion-module-hotshot-cart.git",
+  "bugs": "https://github.com/companion/companion-module-hotshot-cart/issues",
+  "main": "../dist/main.js",
+  "scripts": [],
+  "runtime": {
+    "type": "node22",
+    "api": "nodejs-esm"
+  },
+  "entrypoint": "../dist/main.js"
+}
