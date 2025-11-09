@@ -127,7 +127,93 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 					id: string
 					state: string
 					label: string
+					fileName?: string
+					progress?: number
+					duration?: number
+					loop?: boolean
 				}>
+				currentClip?: {
+					id?: number
+					name?: string
+					fileName?: string
+					state?: string
+					loop?: boolean
+					progress?: number
+					duration?: number
+				}
+			}
+
+			// Update global player variables
+			if (status) {
+				const globalVars: Record<string, string> = {}
+
+				// Find currently playing clip
+				let currentClip = status.currentClip
+				if (!currentClip && status.carts) {
+					// If no currentClip field, find first playing cart
+					const playingCart = status.carts.find((cart) => cart.state === 'playing')
+					if (playingCart) {
+						currentClip = {
+							name: playingCart.label,
+							fileName: playingCart.fileName,
+							state: playingCart.state,
+							loop: playingCart.loop,
+							progress: playingCart.progress,
+							duration: playingCart.duration,
+						}
+					}
+				}
+
+				if (currentClip) {
+					globalVars['clip_id'] = String(currentClip.id || '')
+					globalVars['clip_name'] = currentClip.fileName || currentClip.name || ''
+					globalVars['status'] = currentClip.state || 'idle'
+					globalVars['loop'] = currentClip.loop ? 'on' : 'off'
+
+					// Calculate timecode from progress
+					const currentTime = currentClip.progress || 0
+					const duration = currentClip.duration || 0
+					const remaining = duration - currentTime
+
+					// Format timecode (HH:MM:SS.FF)
+					const formatTimecode = (seconds: number): string => {
+						const hrs = Math.floor(seconds / 3600)
+						const mins = Math.floor((seconds % 3600) / 60)
+						const secs = Math.floor(seconds % 60)
+						const frames = Math.floor((seconds % 1) * 100)
+						return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(frames).padStart(2, '0')}`
+					}
+
+					globalVars['timecode'] = formatTimecode(currentTime)
+					globalVars['timecode_hh'] = String(Math.floor(currentTime / 3600)).padStart(2, '0')
+					globalVars['timecode_mm'] = String(Math.floor((currentTime % 3600) / 60)).padStart(2, '0')
+					globalVars['timecode_ss'] = String(Math.floor(currentTime % 60)).padStart(2, '0')
+					globalVars['timecode_ff'] = String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')
+
+					globalVars['remaining_timecode'] = formatTimecode(remaining)
+					globalVars['remaining_hh'] = String(Math.floor(remaining / 3600)).padStart(2, '0')
+					globalVars['remaining_mm'] = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0')
+					globalVars['remaining_ss'] = String(Math.floor(remaining % 60)).padStart(2, '0')
+					globalVars['remaining_ff'] = String(Math.floor((remaining % 1) * 100)).padStart(2, '0')
+				} else {
+					// No clip playing - set defaults
+					globalVars['clip_id'] = ''
+					globalVars['clip_name'] = ''
+					globalVars['status'] = 'idle'
+					globalVars['loop'] = 'off'
+					globalVars['timecode'] = '00:00:00.00'
+					globalVars['timecode_hh'] = '00'
+					globalVars['timecode_mm'] = '00'
+					globalVars['timecode_ss'] = '00'
+					globalVars['timecode_ff'] = '00'
+					globalVars['remaining_timecode'] = '00:00:00.00'
+					globalVars['remaining_hh'] = '00'
+					globalVars['remaining_mm'] = '00'
+					globalVars['remaining_ss'] = '00'
+					globalVars['remaining_ff'] = '00'
+				}
+
+				this.setVariableValues(globalVars)
 			}
 
 			if (status?.carts) {
