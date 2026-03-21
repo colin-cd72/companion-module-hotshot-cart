@@ -1,18 +1,26 @@
 {
+  "id": "hotshot-cart",
   "manifestVersion": 1,
-  "name": "hotshot-cart",
-  "shortname": "hotshot-cart",
-  "manufacturer": "Colin DeFord",
-  "product": ["HotShot Cart"],
-  "version": "1.0.0",
+  "name": "HotShot Cart",
+  "shortname": "HotShot Cart",
+  "description": "Control HotShot Cart professional audio cart player",
+  "manufacturer": "Fat Brain Group",
+  "products": ["HotShot Cart"],
+  "keywords": ["audio", "cart", "player", "broadcast", "playout"],
+  "version": "0.0.0",
   "license": "MIT",
-  "repository": "git+https://github.com/companion/companion-module-hotshot-cart.git",
-  "bugs": "https://github.com/companion/companion-module-hotshot-cart/issues",
-  "main": "../dist/main.js",
-  "scripts": [],
+  "repository": "git+https://github.com/colin-cd72/companion-module-hotshot-cart.git",
+  "bugs": "https://github.com/colin-cd72/companion-module-hotshot-cart/issues",
+  "maintainers": [
+    {
+      "name": "Colin DeFord",
+      "email": "colin@fatbraingroup.com"
+    }
+  ],
   "runtime": {
     "type": "node22",
-    "api": "nodejs-esm"
-  },
-  "entrypoint": "../dist/main.js"
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../dist/main.js"
+  }
 }
