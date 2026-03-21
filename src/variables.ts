@@ -31,6 +31,26 @@ export function GetVariableDefinitions(): CompanionVariableDefinition[] {
 			variableId: `button_${i}_label`,
 			name: `Button ${i} Label`,
 		})
+		variables.push({
+			variableId: `button_${i}_artist`,
+			name: `Button ${i} Artist`,
+		})
+		variables.push({
+			variableId: `button_${i}_item_number`,
+			name: `Button ${i} Item Number`,
+		})
+		variables.push({
+			variableId: `button_${i}_track_count`,
+			name: `Button ${i} Track Count`,
+		})
+		variables.push({
+			variableId: `button_${i}_time_remaining`,
+			name: `Button ${i} Time Remaining`,
+		})
+		variables.push({
+			variableId: `button_${i}_duration`,
+			name: `Button ${i} Duration`,
+		})
 	}
 
 	return variables

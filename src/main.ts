@@ -8,6 +8,11 @@ import { GetVariableDefinitions } from './variables.js'
 interface ButtonStatus {
 	state: string
 	label: string
+	artist: string
+	itemNumber: string
+	trackCount: number
+	timeRemaining: number
+	duration: number
 }
 
 export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
@@ -69,6 +74,19 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 
 	updateVariables(): void {
 		this.setVariableDefinitions(GetVariableDefinitions())
+
+		// Initialize button variables with defaults
+		const defaultVars: Record<string, string | number> = {}
+		for (let i = 1; i <= 128; i++) {
+			defaultVars[`button_${i}_state`] = 'idle'
+			defaultVars[`button_${i}_label`] = ''
+			defaultVars[`button_${i}_artist`] = ''
+			defaultVars[`button_${i}_item_number`] = ''
+			defaultVars[`button_${i}_track_count`] = 0
+			defaultVars[`button_${i}_time_remaining`] = ''
+			defaultVars[`button_${i}_duration`] = ''
+		}
+		this.setVariableValues(defaultVars)
 	}
 
 	updatePresets(): void {
@@ -122,125 +140,151 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 
 	async pollStatus(): Promise<void> {
 		try {
-			const status = (await this.sendCommand('/api/status', 'GET')) as {
-				carts?: Array<{
-					id: string
+			// API returns Record<cartId, cartStatus>
+			const statusData = (await this.sendCommand('/api/status', 'GET')) as Record<
+				string,
+				{
 					state: string
+					fileName: string
 					label: string
-					fileName?: string
-					progress?: number
-					duration?: number
-					loop?: boolean
-				}>
-				currentClip?: {
-					id?: number
-					name?: string
-					fileName?: string
-					state?: string
-					loop?: boolean
-					progress?: number
-					duration?: number
+					artist: string
+					itemNumber: string
+					trackCount: number
+					channels: number
+					duration: number
+					elapsed: number
+					progress: number
+					timeRemaining: number
+					fileTracks: Array<{
+						fileName: string
+						state: string
+						duration: number
+						elapsed: number
+						progress: number
+						timeRemaining: number
+						channels: number
+						fileId: string
+					}>
 				}
+			>
+
+			if (!statusData) {
+				return
 			}
+
+			// Convert the object format to array format
+			const carts = Object.entries(statusData).map(([id, data]) => {
+				const actualFileName = data.fileName || (data.fileTracks?.[0]?.fileName ?? '')
+				const trackData = data.fileTracks?.[0]
+				const actualDuration = data.duration || trackData?.duration || 0
+				const actualElapsed = data.elapsed || trackData?.elapsed || 0
+				const actualTimeRemaining = data.timeRemaining || trackData?.timeRemaining || 0
+				const actualState = data.state !== 'idle' ? data.state : (trackData?.state ?? 'idle')
+
+				return {
+					id,
+					...data,
+					fileName: actualFileName,
+					duration: actualDuration,
+					elapsed: actualElapsed,
+					timeRemaining: actualTimeRemaining,
+					state: actualState,
+				}
+			})
 
 			// Update global player variables
-			if (status) {
-				const globalVars: Record<string, string> = {}
+			const globalVars: Record<string, string | number> = {}
 
-				// Find currently playing clip
-				let currentClip = status.currentClip
-				if (!currentClip && status.carts) {
-					// If no currentClip field, find first playing cart
-					const playingCart = status.carts.find((cart) => cart.state === 'playing')
-					if (playingCart) {
-						currentClip = {
-							name: playingCart.label,
-							fileName: playingCart.fileName,
-							state: playingCart.state,
-							loop: playingCart.loop,
-							progress: playingCart.progress,
-							duration: playingCart.duration,
-						}
-					}
+			// Find currently playing clip
+			const playingCart = carts.find((cart) => cart.state === 'playing')
+
+			if (playingCart) {
+				globalVars['clip_id'] = playingCart.id
+				globalVars['clip_name'] = playingCart.label || playingCart.fileName
+				globalVars['status'] = playingCart.state
+				globalVars['loop'] = 'off'
+
+				const currentTime = playingCart.elapsed
+				const remaining = playingCart.timeRemaining
+
+				const formatTimecode = (seconds: number): string => {
+					const hrs = Math.floor(seconds / 3600)
+					const mins = Math.floor((seconds % 3600) / 60)
+					const secs = Math.floor(seconds % 60)
+					const frames = Math.floor((seconds % 1) * 100)
+					return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(frames).padStart(2, '0')}`
 				}
 
-				if (currentClip) {
-					globalVars['clip_id'] = String(currentClip.id || '')
-					globalVars['clip_name'] = currentClip.fileName || currentClip.name || ''
-					globalVars['status'] = currentClip.state || 'idle'
-					globalVars['loop'] = currentClip.loop ? 'on' : 'off'
+				globalVars['timecode'] = formatTimecode(currentTime)
+				globalVars['timecode_hh'] = String(Math.floor(currentTime / 3600)).padStart(2, '0')
+				globalVars['timecode_mm'] = String(Math.floor((currentTime % 3600) / 60)).padStart(2, '0')
+				globalVars['timecode_ss'] = String(Math.floor(currentTime % 60)).padStart(2, '0')
+				globalVars['timecode_ff'] = String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')
 
-					// Calculate timecode from progress
-					const currentTime = currentClip.progress || 0
-					const duration = currentClip.duration || 0
-					const remaining = duration - currentTime
+				globalVars['remaining_timecode'] = formatTimecode(remaining)
+				globalVars['remaining_hh'] = String(Math.floor(remaining / 3600)).padStart(2, '0')
+				globalVars['remaining_mm'] = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0')
+				globalVars['remaining_ss'] = String(Math.floor(remaining % 60)).padStart(2, '0')
+				globalVars['remaining_ff'] = String(Math.floor((remaining % 1) * 100)).padStart(2, '0')
+			} else {
+				globalVars['clip_id'] = ''
+				globalVars['clip_name'] = ''
+				globalVars['status'] = 'idle'
+				globalVars['loop'] = 'off'
+				globalVars['timecode'] = '00:00:00.00'
+				globalVars['timecode_hh'] = '00'
+				globalVars['timecode_mm'] = '00'
+				globalVars['timecode_ss'] = '00'
+				globalVars['timecode_ff'] = '00'
+				globalVars['remaining_timecode'] = '00:00:00.00'
+				globalVars['remaining_hh'] = '00'
+				globalVars['remaining_mm'] = '00'
+				globalVars['remaining_ss'] = '00'
+				globalVars['remaining_ff'] = '00'
+			}
 
-					// Format timecode (HH:MM:SS.FF)
-					const formatTimecode = (seconds: number): string => {
-						const hrs = Math.floor(seconds / 3600)
-						const mins = Math.floor((seconds % 3600) / 60)
-						const secs = Math.floor(seconds % 60)
-						const frames = Math.floor((seconds % 1) * 100)
-						return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(frames).padStart(2, '0')}`
+			// Helper to format time as MM:SS
+			const formatTime = (seconds: number): string => {
+				if (!seconds || seconds <= 0) return ''
+				const mins = Math.floor(seconds / 60)
+				const secs = Math.floor(seconds % 60)
+				return `${mins}:${String(secs).padStart(2, '0')}`
+			}
+
+			// Update button status
+			this.buttonStatus = {}
+
+			carts.forEach((cart) => {
+				// Extract page and cart number from cart ID (format: page-0-cart-1)
+				const match = cart.id.match(/page-(\d+)-cart-(\d+)$/)
+				if (match) {
+					const pageNum = parseInt(match[1])
+					const cartNum = parseInt(match[2])
+					// Calculate flat button number: page 0 = 1-24, page 1 = 25-48, etc.
+					const buttonNum = pageNum * 24 + cartNum
+
+					this.buttonStatus[buttonNum] = {
+						state: cart.state,
+						label: cart.label || cart.fileName || '',
+						artist: cart.artist || '',
+						itemNumber: cart.itemNumber || '',
+						trackCount: cart.trackCount || 0,
+						timeRemaining: cart.timeRemaining || 0,
+						duration: cart.duration || 0,
 					}
 
-					globalVars['timecode'] = formatTimecode(currentTime)
-					globalVars['timecode_hh'] = String(Math.floor(currentTime / 3600)).padStart(2, '0')
-					globalVars['timecode_mm'] = String(Math.floor((currentTime % 3600) / 60)).padStart(2, '0')
-					globalVars['timecode_ss'] = String(Math.floor(currentTime % 60)).padStart(2, '0')
-					globalVars['timecode_ff'] = String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')
-
-					globalVars['remaining_timecode'] = formatTimecode(remaining)
-					globalVars['remaining_hh'] = String(Math.floor(remaining / 3600)).padStart(2, '0')
-					globalVars['remaining_mm'] = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0')
-					globalVars['remaining_ss'] = String(Math.floor(remaining % 60)).padStart(2, '0')
-					globalVars['remaining_ff'] = String(Math.floor((remaining % 1) * 100)).padStart(2, '0')
-				} else {
-					// No clip playing - set defaults
-					globalVars['clip_id'] = ''
-					globalVars['clip_name'] = ''
-					globalVars['status'] = 'idle'
-					globalVars['loop'] = 'off'
-					globalVars['timecode'] = '00:00:00.00'
-					globalVars['timecode_hh'] = '00'
-					globalVars['timecode_mm'] = '00'
-					globalVars['timecode_ss'] = '00'
-					globalVars['timecode_ff'] = '00'
-					globalVars['remaining_timecode'] = '00:00:00.00'
-					globalVars['remaining_hh'] = '00'
-					globalVars['remaining_mm'] = '00'
-					globalVars['remaining_ss'] = '00'
-					globalVars['remaining_ff'] = '00'
+					globalVars[`button_${buttonNum}_state`] = cart.state
+					globalVars[`button_${buttonNum}_label`] = cart.label || cart.fileName || ''
+					globalVars[`button_${buttonNum}_artist`] = cart.artist || ''
+					globalVars[`button_${buttonNum}_item_number`] = cart.itemNumber || ''
+					globalVars[`button_${buttonNum}_track_count`] = cart.trackCount || 0
+					globalVars[`button_${buttonNum}_time_remaining`] = formatTime(cart.timeRemaining)
+					globalVars[`button_${buttonNum}_duration`] = formatTime(cart.duration)
 				}
+			})
 
-				this.setVariableValues(globalVars)
-			}
-
-			if (status?.carts) {
-				this.buttonStatus = {}
-
-				// Convert cart status to button number index
-				status.carts.forEach((cart) => {
-					// Extract button number from cart ID (format: page-0-cart-1)
-					const match = cart.id.match(/cart-(\d+)$/)
-					if (match) {
-						const buttonNum = parseInt(match[1])
-						this.buttonStatus[buttonNum] = {
-							state: cart.state,
-							label: cart.label,
-						}
-
-						// Update variables
-						this.setVariableValues({
-							[`button_${buttonNum}_state`]: cart.state,
-							[`button_${buttonNum}_label`]: cart.label || '',
-						})
-					}
-				})
-
-				// Check all feedbacks
-				this.checkFeedbacks('buttonState')
-			}
+			this.setVariableValues(globalVars)
+			this.checkFeedbacks('buttonState')
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : String(err)
 			this.log('debug', `Poll error: ${errorMessage}`)
