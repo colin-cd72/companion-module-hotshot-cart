@@ -117,12 +117,32 @@ Changes the button appearance when the cart button is playing.
 
 ## Variables
 
-The module creates variables for each button:
+### Global Variables
 
-- `$(hotshot-cart:button_X_state)` - Current state of button X (idle/playing/stopping)
-- `$(hotshot-cart:button_X_label)` - Label/name of button X
+- `$(hotshot-cart:clip_id)` - Currently playing clip ID
+- `$(hotshot-cart:clip_name)` - Currently playing clip name
+- `$(hotshot-cart:status)` - Player status (idle/playing)
+- `$(hotshot-cart:loop)` - Loop setting (on/off)
+- `$(hotshot-cart:timecode)` - Current timecode (HH:MM:SS.FF)
+- `$(hotshot-cart:timecode_hh)` - Timecode hours
+- `$(hotshot-cart:timecode_mm)` - Timecode minutes
+- `$(hotshot-cart:timecode_ss)` - Timecode seconds
+- `$(hotshot-cart:timecode_ff)` - Timecode frames
+- `$(hotshot-cart:remaining_timecode)` - Remaining time (HH:MM:SS.FF)
+- `$(hotshot-cart:remaining_hh)` - Remaining hours
+- `$(hotshot-cart:remaining_mm)` - Remaining minutes
+- `$(hotshot-cart:remaining_ss)` - Remaining seconds
+- `$(hotshot-cart:remaining_ff)` - Remaining frames
 
-Where X is the button number (1-128).
+### Button Variables (X = 1-128)
+
+- `$(hotshot-cart:button_X_state)` - Current state (idle/playing/stopping/fading)
+- `$(hotshot-cart:button_X_label)` - Button label/name
+- `$(hotshot-cart:button_X_artist)` - Artist name
+- `$(hotshot-cart:button_X_item_number)` - User-defined item number
+- `$(hotshot-cart:button_X_track_count)` - Number of audio tracks
+- `$(hotshot-cart:button_X_time_remaining)` - Time remaining (MM:SS)
+- `$(hotshot-cart:button_X_duration)` - Total duration (MM:SS)
 
 ## Presets
 
@@ -207,6 +227,17 @@ For issues and feature requests, please open an issue on GitHub.
 MIT License - See LICENSE file for details
 
 ## Version History
+
+### 1.1.0 (2025-03-21)
+- Added new button variables:
+  - `button_X_artist` - Artist name
+  - `button_X_item_number` - User-defined item number
+  - `button_X_track_count` - Number of audio tracks
+  - `button_X_time_remaining` - Formatted time remaining (MM:SS)
+  - `button_X_duration` - Formatted duration (MM:SS)
+- Added global timecode and remaining time variables
+- Improved API response parsing for latest HotShot Cart API
+- Fixed button number calculation for multi-page layouts
 
 ### 1.0.0 (2025-01-08)
 - Initial release
