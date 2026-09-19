@@ -1,10 +1,6 @@
-import eslint from '@eslint/js'
-import tseslint from 'typescript-eslint'
+import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
 
-export default tseslint.config(
-	eslint.configs.recommended,
-	...tseslint.configs.recommended,
-	{
-		ignores: ['dist/', 'node_modules/', '*.js'],
-	}
-)
+export default generateEslintConfig({
+	enableTypescript: true,
+	ignores: ['audio-cart-player/'],
+})

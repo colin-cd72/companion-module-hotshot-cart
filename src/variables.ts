@@ -1,14 +1,22 @@
-import type { CompanionVariableDefinition } from '@companion-module/base'
+import type { CompanionVariableDefinition, CompanionVariableValues } from '@companion-module/base'
+import { formatTime, formatTimecode, splitTimecode, type CartSummary } from './api.js'
 
-export function GetVariableDefinitions(): CompanionVariableDefinition[] {
-	const variables: CompanionVariableDefinition[] = []
+const BUTTON_VARIABLES: ReadonlyArray<[suffix: string, name: string]> = [
+	['state', 'State'],
+	['label', 'Label'],
+	['artist', 'Artist'],
+	['item_number', 'Item Number'],
+	['track_count', 'Track Count'],
+	['time_remaining', 'Time Remaining'],
+	['duration', 'Duration'],
+]
 
-	// Global player variables
-	variables.push(
-		{ variableId: 'clip_id', name: 'Currently Selected Clip Number' },
-		{ variableId: 'clip_name', name: 'Currently Selected Clip File Name' },
+/** Variable definitions for the player plus every button from 1 to `buttonCount`. */
+export function GetVariableDefinitions(buttonCount: number): CompanionVariableDefinition[] {
+	const variables: CompanionVariableDefinition[] = [
+		{ variableId: 'clip_id', name: 'Currently Playing Clip ID' },
+		{ variableId: 'clip_name', name: 'Currently Playing Clip Name' },
 		{ variableId: 'status', name: 'Player Status' },
-		{ variableId: 'loop', name: 'Player Loop Setting' },
 		{ variableId: 'timecode', name: 'Current Clip Timecode' },
 		{ variableId: 'timecode_hh', name: 'Timecode Hours' },
 		{ variableId: 'timecode_mm', name: 'Timecode Minutes' },
@@ -18,40 +26,59 @@ export function GetVariableDefinitions(): CompanionVariableDefinition[] {
 		{ variableId: 'remaining_hh', name: 'Remaining Hours' },
 		{ variableId: 'remaining_mm', name: 'Remaining Minutes' },
 		{ variableId: 'remaining_ss', name: 'Remaining Seconds' },
-		{ variableId: 'remaining_ff', name: 'Remaining Fraction' }
-	)
+		{ variableId: 'remaining_ff', name: 'Remaining Frames' },
+	]
 
-	// Button-specific variables
-	for (let i = 1; i <= 128; i++) {
-		variables.push({
-			variableId: `button_${i}_state`,
-			name: `Button ${i} State`,
-		})
-		variables.push({
-			variableId: `button_${i}_label`,
-			name: `Button ${i} Label`,
-		})
-		variables.push({
-			variableId: `button_${i}_artist`,
-			name: `Button ${i} Artist`,
-		})
-		variables.push({
-			variableId: `button_${i}_item_number`,
-			name: `Button ${i} Item Number`,
-		})
-		variables.push({
-			variableId: `button_${i}_track_count`,
-			name: `Button ${i} Track Count`,
-		})
-		variables.push({
-			variableId: `button_${i}_time_remaining`,
-			name: `Button ${i} Time Remaining`,
-		})
-		variables.push({
-			variableId: `button_${i}_duration`,
-			name: `Button ${i} Duration`,
-		})
+	for (let i = 1; i <= buttonCount; i++) {
+		for (const [suffix, name] of BUTTON_VARIABLES) {
+			variables.push({ variableId: `button_${i}_${suffix}`, name: `Button ${i} ${name}` })
+		}
 	}
 
 	return variables
+}
+
+/** Global player variables for the currently playing cart, or idle values when nothing is playing. */
+export function GetPlayerVariableValues(playing?: CartSummary): CompanionVariableValues {
+	const elapsed = splitTimecode(playing?.elapsed ?? 0)
+	const remaining = splitTimecode(playing?.timeRemaining ?? 0)
+
+	return {
+		clip_id: playing?.id ?? '',
+		clip_name: playing?.label ?? '',
+		status: playing?.state ?? 'idle',
+		timecode: formatTimecode(playing?.elapsed ?? 0),
+		timecode_hh: elapsed.hh,
+		timecode_mm: elapsed.mm,
+		timecode_ss: elapsed.ss,
+		timecode_ff: elapsed.ff,
+		remaining_timecode: formatTimecode(playing?.timeRemaining ?? 0),
+		remaining_hh: remaining.hh,
+		remaining_mm: remaining.mm,
+		remaining_ss: remaining.ss,
+		remaining_ff: remaining.ff,
+	}
+}
+
+/** Variables for one button, or idle values when no cart is loaded there. */
+export function GetButtonVariableValues(buttonNumber: number, cart?: CartSummary): CompanionVariableValues {
+	const prefix = `button_${buttonNumber}_`
+	return {
+		[`${prefix}state`]: cart?.state ?? 'idle',
+		[`${prefix}label`]: cart?.label ?? '',
+		[`${prefix}artist`]: cart?.artist ?? '',
+		[`${prefix}item_number`]: cart?.itemNumber ?? '',
+		[`${prefix}track_count`]: cart?.trackCount ?? 0,
+		[`${prefix}time_remaining`]: formatTime(cart?.timeRemaining ?? 0),
+		[`${prefix}duration`]: formatTime(cart?.duration ?? 0),
+	}
+}
+
+/** Every variable at its idle value, used until the first status poll arrives. */
+export function GetDefaultVariableValues(buttonCount: number): CompanionVariableValues {
+	const values = GetPlayerVariableValues()
+	for (let i = 1; i <= buttonCount; i++) {
+		Object.assign(values, GetButtonVariableValues(i))
+	}
+	return values
 }

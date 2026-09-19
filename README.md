@@ -21,8 +21,11 @@ This module allows you to control HotShot Cart audio player from Bitfocus Compan
 
 1. **Target IP**: The IP address of the computer running HotShot Cart (default: `localhost`)
 2. **Target Port**: The HTTP API port (default: `8080`)
-3. **Enable Status Polling**: Enable/disable automatic status updates (default: `true`)
-4. **Poll Interval**: How often to poll for status in milliseconds (default: `1000`)
+3. **Buttons Per Page**: Must match the grid size in HotShot Cart, rows x columns (default: `24`)
+4. **Pages**: Number of pages in HotShot Cart. Variables are created for Pages x Buttons Per Page buttons (default: `10`, giving 240 buttons)
+5. **Status API Token** / **Control API Token**: Only needed when "Require API Token" is enabled in HotShot Cart. The status token is sent when polling, the control token for play/stop/toggle/fade. If only one is set it is used for both.
+6. **Enable Status Polling**: Enable/disable automatic status updates (default: `true`)
+7. **Poll Interval**: How often to poll for status in milliseconds (default: `1000`)
 
 ## Development
 
@@ -31,21 +34,25 @@ This module is written in TypeScript and follows the Bitfocus Companion TypeScri
 ### Building
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Build the module:
+
    ```bash
    npm run build
    ```
 
 3. Watch mode for development:
+
    ```bash
    npm run dev
    ```
 
 4. Lint the code:
+
    ```bash
    npm run lint
    ```
@@ -58,6 +65,7 @@ This module is written in TypeScript and follows the Bitfocus Companion TypeScri
 ### Installation in Companion
 
 1. Link to Companion's module directory:
+
    ```bash
    # Find your Companion installation directory
    # On macOS: ~/Library/Application Support/companion-module-dev
@@ -79,39 +87,50 @@ This module is written in TypeScript and follows the Bitfocus Companion TypeScri
 ## Available Actions
 
 ### Play Button
+
 Starts playback of the specified button number.
 
 **Options:**
+
 - Button Number (1-999)
 
 ### Stop Button
+
 Stops playback of the specified button number.
 
 **Options:**
+
 - Button Number (1-999)
 
 ### Toggle Button
+
 Toggles the play/stop state of the specified button number.
 
 **Options:**
+
 - Button Number (1-999)
 
 ### Fade Button
+
 Fades out the specified button over a custom duration.
 
 **Options:**
+
 - Button Number (1-999)
 - Fade Duration (0.1-30.0 seconds)
 
 ## Feedbacks
 
 ### Button Playing State
+
 Changes the button appearance when the cart button is playing.
 
 **Options:**
+
 - Button Number (1-999)
 
 **Default Style:**
+
 - Background Color: Green (#00ff00)
 - Text Color: Black (#000000)
 
@@ -122,7 +141,6 @@ Changes the button appearance when the cart button is playing.
 - `$(hotshot-cart:clip_id)` - Currently playing clip ID
 - `$(hotshot-cart:clip_name)` - Currently playing clip name
 - `$(hotshot-cart:status)` - Player status (idle/playing)
-- `$(hotshot-cart:loop)` - Loop setting (on/off)
 - `$(hotshot-cart:timecode)` - Current timecode (HH:MM:SS.FF)
 - `$(hotshot-cart:timecode_hh)` - Timecode hours
 - `$(hotshot-cart:timecode_mm)` - Timecode minutes
@@ -134,9 +152,9 @@ Changes the button appearance when the cart button is playing.
 - `$(hotshot-cart:remaining_ss)` - Remaining seconds
 - `$(hotshot-cart:remaining_ff)` - Remaining frames
 
-### Button Variables (X = 1-128)
+### Button Variables (X = 1 to Pages x Buttons Per Page, 240 by default)
 
-- `$(hotshot-cart:button_X_state)` - Current state (idle/playing/stopping/fading)
+- `$(hotshot-cart:button_X_state)` - Current state (idle/playing/paused/stopping/fading/error)
 - `$(hotshot-cart:button_X_label)` - Button label/name
 - `$(hotshot-cart:button_X_artist)` - Artist name
 - `$(hotshot-cart:button_X_item_number)` - User-defined item number
@@ -149,10 +167,12 @@ Changes the button appearance when the cart button is playing.
 The module includes ready-to-use presets:
 
 ### Play Buttons (1-12)
+
 - Simple play buttons with state feedback
 - Click to play the corresponding cart button
 
 ### Toggle Buttons (1-12)
+
 - Toggle buttons with state feedback
 - Click to toggle play/stop state
 - Shows green when playing
@@ -169,11 +189,13 @@ The module includes ready-to-use presets:
 ### Example Button Configuration
 
 **Toggle Button with Feedback:**
+
 1. Add action: "Toggle Button" with Button Number: 1
 2. Add feedback: "Button Playing State" with Button Number: 1
 3. The button will turn green when cart button 1 is playing
 
 **Multi-Action Button:**
+
 1. Button Down: Play Button 1
 2. Button Up: Fade Button 1 (3.0 seconds)
 3. This creates a button that plays on press and fades on release
@@ -182,6 +204,7 @@ The module includes ready-to-use presets:
 
 - Bitfocus Companion 3.0 or later
 - HotShot Cart application running with HTTP API enabled
+- If HotShot Cart requires API tokens, the same tokens entered in the module configuration
 - Network connectivity between Companion and HotShot Cart
 
 ## API Endpoints Used
@@ -201,7 +224,8 @@ This module uses the HotShot Cart HTTP API:
 1. Verify HotShot Cart is running
 2. Check the IP address and port in the module configuration
 3. Ensure no firewall is blocking port 8080
-4. Test the API manually:
+4. If HotShot Cart requires API tokens, check the tokens match (the module log shows `HTTP 401` or `HTTP 403` when they do not)
+5. Test the API manually:
    ```bash
    curl http://localhost:8080/api/status
    ```
@@ -215,8 +239,9 @@ This module uses the HotShot Cart HTTP API:
 ### Buttons Not Responding
 
 1. Verify the button number exists in HotShot Cart
-2. Check that the HTTP API is enabled in HotShot Cart settings
-3. Look at the module log in Companion for HTTP errors
+2. Check that Buttons Per Page matches the grid size in HotShot Cart
+3. Check that the HTTP API is enabled in HotShot Cart settings
+4. Look at the module log in Companion for HTTP errors
 
 ## Support
 
@@ -228,7 +253,18 @@ MIT License - See LICENSE file for details
 
 ## Version History
 
+### 1.2.0 (2026-09-19)
+
+- Added **Buttons Per Page** and **Pages** configuration so the module matches the HotShot Cart grid; variables now cover every cart (default 10 pages x 24)
+- Added **Status API Token** and **Control API Token** for HotShot Cart installs that require API tokens
+- Removed the `loop` variable, which HotShot Cart never reported
+- Polling no longer piles up requests on a slow host: one request in flight, 5 second timeout
+- Only changed variables are sent to Companion on each poll; buttons that disappear from the status revert to idle
+- HTTP errors are reported as warnings instead of connection failures
+- Switched to the Bitfocus shared ESLint config and added a LICENSE file
+
 ### 1.1.0 (2025-03-21)
+
 - Added new button variables:
   - `button_X_artist` - Artist name
   - `button_X_item_number` - User-defined item number
@@ -240,6 +276,7 @@ MIT License - See LICENSE file for details
 - Fixed button number calculation for multi-page layouts
 
 ### 1.0.0 (2025-01-08)
+
 - Initial release
 - Play, Stop, Toggle, and Fade actions
 - Button state feedback

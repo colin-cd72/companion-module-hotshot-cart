@@ -1,6 +1,6 @@
 {
 	"name": "companion-module-hotshot-cart",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Bitfocus Companion module for HotShot Cart audio player",
 	"main": "dist/main.js",
 	"type": "module",
@@ -9,7 +9,7 @@
 		"dev": "tsc -p tsconfig.build.json --watch",
 		"lint": "eslint .",
 		"format": "prettier --write .",
-		"package": "yarn build && companion-module-build"
+		"package": "npm run build && companion-module-build"
 	},
 	"keywords": [
 		"companion",
@@ -20,6 +20,9 @@
 	],
 	"author": "Colin DeFord",
 	"license": "MIT",
+	"engines": {
+		"node": ">=22.8"
+	},
 	"dependencies": {
 		"@companion-module/base": "~1.12.1"
 	},

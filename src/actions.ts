@@ -1,52 +1,34 @@
-import type { CompanionActionDefinitions } from '@companion-module/base'
+import type { CompanionActionDefinitions, CompanionInputFieldNumber } from '@companion-module/base'
 import type { HotShotCartInstance } from './main.js'
+
+export const buttonNumberOption: CompanionInputFieldNumber = {
+	type: 'number',
+	label: 'Button Number',
+	id: 'buttonNumber',
+	default: 1,
+	min: 1,
+	max: 999,
+}
 
 export function GetActions(instance: HotShotCartInstance): CompanionActionDefinitions {
 	return {
 		playButton: {
 			name: 'Play Button',
-			options: [
-				{
-					type: 'number',
-					label: 'Button Number',
-					id: 'buttonNumber',
-					default: 1,
-					min: 1,
-					max: 999,
-				},
-			],
+			options: [buttonNumberOption],
 			callback: async (action) => {
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/play`, 'POST')
 			},
 		},
 		stopButton: {
 			name: 'Stop Button',
-			options: [
-				{
-					type: 'number',
-					label: 'Button Number',
-					id: 'buttonNumber',
-					default: 1,
-					min: 1,
-					max: 999,
-				},
-			],
+			options: [buttonNumberOption],
 			callback: async (action) => {
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/stop`, 'POST')
 			},
 		},
 		toggleButton: {
 			name: 'Toggle Button',
-			options: [
-				{
-					type: 'number',
-					label: 'Button Number',
-					id: 'buttonNumber',
-					default: 1,
-					min: 1,
-					max: 999,
-				},
-			],
+			options: [buttonNumberOption],
 			callback: async (action) => {
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/toggle`, 'POST')
 			},
@@ -54,14 +36,7 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 		fadeButton: {
 			name: 'Fade Button',
 			options: [
-				{
-					type: 'number',
-					label: 'Button Number',
-					id: 'buttonNumber',
-					default: 1,
-					min: 1,
-					max: 999,
-				},
+				buttonNumberOption,
 				{
 					type: 'number',
 					label: 'Fade Duration (seconds)',
@@ -73,11 +48,9 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 				},
 			],
 			callback: async (action) => {
-				await instance.sendCommand(
-					`/api/button/${action.options.buttonNumber}/fade`,
-					'POST',
-					{ duration: action.options.duration }
-				)
+				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/fade`, 'POST', {
+					duration: action.options.duration,
+				})
 			},
 		},
 	}

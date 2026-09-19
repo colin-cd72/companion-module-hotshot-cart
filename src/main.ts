@@ -1,294 +1,227 @@
-import { InstanceBase, InstanceStatus, runEntrypoint, type SomeCompanionConfigField } from '@companion-module/base'
+import {
+	InstanceBase,
+	InstanceStatus,
+	runEntrypoint,
+	type CompanionVariableValues,
+	type SomeCompanionConfigField,
+} from '@companion-module/base'
 import { GetActions } from './actions.js'
+import {
+	DEFAULT_BUTTONS_PER_PAGE,
+	DEFAULT_PAGES,
+	REQUEST_TIMEOUT_MS,
+	cartIdToButtonNumber,
+	summarizeCart,
+	type CartSummary,
+	type StatusResponse,
+} from './api.js'
 import { GetConfigFields, type ModuleConfig } from './config.js'
 import { GetFeedbacks } from './feedbacks.js'
 import { GetPresets } from './presets.js'
-import { GetVariableDefinitions } from './variables.js'
+import {
+	GetButtonVariableValues,
+	GetDefaultVariableValues,
+	GetPlayerVariableValues,
+	GetVariableDefinitions,
+} from './variables.js'
 
-interface ButtonStatus {
-	state: string
-	label: string
-	artist: string
-	itemNumber: string
-	trackCount: number
-	timeRemaining: number
-	duration: number
-}
+const DEFAULT_POLL_INTERVAL_MS = 1000
 
 export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 	public config!: ModuleConfig
-	public buttonStatus: Record<number, ButtonStatus> = {}
-	private pollInterval?: NodeJS.Timeout
+	/** Latest known status for each flat button number, refreshed by polling. */
+	public buttonStatus: Record<number, CartSummary> = {}
 
-	constructor(internal: unknown) {
-		super(internal)
-	}
+	/** Number of buttons variables are currently registered for (Pages x Buttons Per Page). */
+	private buttonCount = 0
+
+	private pollTimer?: NodeJS.Timeout
+	private pollInFlight = false
 
 	async init(config: ModuleConfig): Promise<void> {
 		this.config = config
 
-		this.updateStatus(InstanceStatus.Ok)
-		this.updateActions()
-		this.updateFeedbacks()
-		this.updateVariables()
-		this.updatePresets()
-
-		// Start polling for status if enabled
-		if (this.config.enablePolling) {
-			this.startPolling()
-		}
+		this.setActionDefinitions(GetActions(this))
+		this.setFeedbackDefinitions(GetFeedbacks(this))
+		this.setPresetDefinitions(GetPresets())
+		this.applyVariableLayout()
+		this.applyPollingConfig()
 	}
 
 	async destroy(): Promise<void> {
-		if (this.pollInterval) {
-			clearInterval(this.pollInterval)
-		}
+		this.stopPolling()
 	}
 
 	async configUpdated(config: ModuleConfig): Promise<void> {
 		this.config = config
+		this.applyVariableLayout()
+		this.applyPollingConfig()
+	}
 
-		this.updateActions()
-		this.updateFeedbacks()
+	private get buttonsPerPage(): number {
+		return this.config.buttonsPerPage || DEFAULT_BUTTONS_PER_PAGE
+	}
 
-		if (this.pollInterval) {
-			clearInterval(this.pollInterval)
-		}
+	/** (Re)register button variables when the configured page layout changes. */
+	private applyVariableLayout(): void {
+		const buttonCount = this.buttonsPerPage * (this.config.pages || DEFAULT_PAGES)
+		if (buttonCount === this.buttonCount) return
 
-		if (this.config.enablePolling) {
-			this.startPolling()
-		}
+		this.buttonCount = buttonCount
+		this.buttonStatus = {}
+		this.setVariableDefinitions(GetVariableDefinitions(buttonCount))
+		// Full set (not diffed): definitions were just replaced, so every value must be sent again
+		this.setVariableValues(GetDefaultVariableValues(buttonCount))
 	}
 
 	getConfigFields(): SomeCompanionConfigField[] {
 		return GetConfigFields()
 	}
 
-	updateActions(): void {
-		this.setActionDefinitions(GetActions(this))
-	}
-
-	updateFeedbacks(): void {
-		this.setFeedbackDefinitions(GetFeedbacks(this))
-	}
-
-	updateVariables(): void {
-		this.setVariableDefinitions(GetVariableDefinitions())
-
-		// Initialize button variables with defaults
-		const defaultVars: Record<string, string | number> = {}
-		for (let i = 1; i <= 128; i++) {
-			defaultVars[`button_${i}_state`] = 'idle'
-			defaultVars[`button_${i}_label`] = ''
-			defaultVars[`button_${i}_artist`] = ''
-			defaultVars[`button_${i}_item_number`] = ''
-			defaultVars[`button_${i}_track_count`] = 0
-			defaultVars[`button_${i}_time_remaining`] = ''
-			defaultVars[`button_${i}_duration`] = ''
+	private applyPollingConfig(): void {
+		if (this.config.enablePolling) {
+			this.updateStatus(InstanceStatus.Connecting)
+			this.startPolling()
+		} else {
+			this.stopPolling()
+			// Without polling there is nothing to verify the connection against
+			this.updateStatus(InstanceStatus.Ok)
 		}
-		this.setVariableValues(defaultVars)
-	}
-
-	updatePresets(): void {
-		this.setPresetDefinitions(GetPresets())
 	}
 
 	async sendCommand(path: string, method: 'GET' | 'POST' = 'GET', body?: Record<string, unknown>): Promise<unknown> {
 		const url = `http://${this.config.host}:${this.config.port}${path}`
 
+		const headers: Record<string, string> = {}
+		if (body) headers['Content-Type'] = 'application/json'
+		const token = this.apiTokenFor(method)
+		if (token) headers['x-api-token'] = token
+
+		let response: Response
 		try {
-			const options: RequestInit = {
-				method: method,
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			}
-
-			if (body) {
-				options.body = JSON.stringify(body)
-			}
-
-			const response = await fetch(url, options)
-
-			if (!response.ok) {
-				this.log('error', `HTTP Error: ${response.status} ${response.statusText}`)
-				this.updateStatus(InstanceStatus.UnknownWarning, `HTTP Error: ${response.status}`)
-			} else {
-				this.updateStatus(InstanceStatus.Ok)
-			}
-
-			return await response.json()
+			response = await fetch(url, {
+				method,
+				headers,
+				body: body ? JSON.stringify(body) : undefined,
+				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+			})
 		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : String(err)
-			this.log('error', `Network error: ${errorMessage}`)
-			this.updateStatus(InstanceStatus.ConnectionFailure, errorMessage)
-		}
-	}
-
-	startPolling(): void {
-		if (this.pollInterval) {
-			clearInterval(this.pollInterval)
+			const message = err instanceof Error ? err.message : String(err)
+			this.log('error', `Network error for ${method} ${path}: ${message}`)
+			this.updateStatus(InstanceStatus.ConnectionFailure, message)
+			return undefined
 		}
 
-		this.pollInterval = setInterval(() => {
-			this.pollStatus()
-		}, this.config.pollInterval || 1000)
+		if (!response.ok) {
+			this.log('error', `HTTP ${response.status} ${response.statusText} for ${method} ${path}`)
+			this.updateStatus(InstanceStatus.UnknownWarning, `HTTP ${response.status}`)
+			return undefined
+		}
 
-		// Poll immediately
-		this.pollStatus()
-	}
+		this.updateStatus(InstanceStatus.Ok)
 
-	async pollStatus(): Promise<void> {
+		const text = await response.text()
+		if (!text) return undefined
 		try {
-			// API returns Record<cartId, cartStatus>
-			const statusData = (await this.sendCommand('/api/status', 'GET')) as Record<
-				string,
-				{
-					state: string
-					fileName: string
-					label: string
-					artist: string
-					itemNumber: string
-					trackCount: number
-					channels: number
-					duration: number
-					elapsed: number
-					progress: number
-					timeRemaining: number
-					fileTracks: Array<{
-						fileName: string
-						state: string
-						duration: number
-						elapsed: number
-						progress: number
-						timeRemaining: number
-						channels: number
-						fileId: string
-					}>
-				}
-			>
+			return JSON.parse(text) as unknown
+		} catch {
+			this.log('warn', `Non-JSON response for ${method} ${path}`)
+			return undefined
+		}
+	}
 
-			if (!statusData) {
-				return
+	/**
+	 * HotShot Cart can require separate tokens for status (GET) and control (POST) access.
+	 * If only one token is configured it is used for both.
+	 */
+	private apiTokenFor(method: 'GET' | 'POST'): string | undefined {
+		const status = this.config.statusApiToken?.trim()
+		const control = this.config.controlApiToken?.trim()
+		return (method === 'GET' ? status || control : control || status) || undefined
+	}
+
+	private startPolling(): void {
+		this.stopPolling()
+
+		const interval = this.config.pollInterval || DEFAULT_POLL_INTERVAL_MS
+		this.pollTimer = setInterval(() => void this.pollStatus(), interval)
+		void this.pollStatus()
+	}
+
+	private stopPolling(): void {
+		if (this.pollTimer) {
+			clearInterval(this.pollTimer)
+			this.pollTimer = undefined
+		}
+	}
+
+	private async pollStatus(): Promise<void> {
+		// Skip this tick if the previous request is still outstanding so slow hosts don't pile up requests
+		if (this.pollInFlight) return
+		this.pollInFlight = true
+
+		try {
+			const statusData = (await this.sendCommand('/api/status')) as StatusResponse | undefined
+			if (!statusData || typeof statusData !== 'object') return
+
+			this.applyStatus(statusData)
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			this.log('debug', `Poll error: ${message}`)
+		} finally {
+			this.pollInFlight = false
+		}
+	}
+
+	private applyStatus(statusData: StatusResponse): void {
+		const buttonStatus: Record<number, CartSummary> = {}
+		const { buttonsPerPage, buttonCount } = this
+		let playingCart: CartSummary | undefined
+
+		for (const [id, data] of Object.entries(statusData)) {
+			const cart = summarizeCart(id, data)
+			const buttonNumber = cartIdToButtonNumber(id, buttonsPerPage)
+
+			if (buttonNumber === undefined) {
+				this.log('debug', `Ignoring cart with unrecognised id: ${id}`)
+				continue
+			}
+			if (buttonNumber > buttonCount) {
+				this.log(
+					'debug',
+					`Ignoring cart ${id}: button ${buttonNumber} exceeds Pages x Buttons Per Page (${buttonCount})`
+				)
+				continue
 			}
 
-			// Convert the object format to array format
-			const carts = Object.entries(statusData).map(([id, data]) => {
-				const actualFileName = data.fileName || (data.fileTracks?.[0]?.fileName ?? '')
-				const trackData = data.fileTracks?.[0]
-				const actualDuration = data.duration || trackData?.duration || 0
-				const actualElapsed = data.elapsed || trackData?.elapsed || 0
-				const actualTimeRemaining = data.timeRemaining || trackData?.timeRemaining || 0
-				const actualState = data.state !== 'idle' ? data.state : (trackData?.state ?? 'idle')
+			buttonStatus[buttonNumber] = cart
+			if (!playingCart && cart.state === 'playing') playingCart = cart
+		}
 
-				return {
-					id,
-					...data,
-					fileName: actualFileName,
-					duration: actualDuration,
-					elapsed: actualElapsed,
-					timeRemaining: actualTimeRemaining,
-					state: actualState,
-				}
-			})
+		// Build the full variable set so buttons that disappeared from the status revert to idle
+		const values = GetPlayerVariableValues(playingCart)
+		for (let i = 1; i <= buttonCount; i++) {
+			Object.assign(values, GetButtonVariableValues(i, buttonStatus[i]))
+		}
 
-			// Update global player variables
-			const globalVars: Record<string, string | number> = {}
+		this.buttonStatus = buttonStatus
 
-			// Find currently playing clip
-			const playingCart = carts.find((cart) => cart.state === 'playing')
-
-			if (playingCart) {
-				globalVars['clip_id'] = playingCart.id
-				globalVars['clip_name'] = playingCart.label || playingCart.fileName
-				globalVars['status'] = playingCart.state
-				globalVars['loop'] = 'off'
-
-				const currentTime = playingCart.elapsed
-				const remaining = playingCart.timeRemaining
-
-				const formatTimecode = (seconds: number): string => {
-					const hrs = Math.floor(seconds / 3600)
-					const mins = Math.floor((seconds % 3600) / 60)
-					const secs = Math.floor(seconds % 60)
-					const frames = Math.floor((seconds % 1) * 100)
-					return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(frames).padStart(2, '0')}`
-				}
-
-				globalVars['timecode'] = formatTimecode(currentTime)
-				globalVars['timecode_hh'] = String(Math.floor(currentTime / 3600)).padStart(2, '0')
-				globalVars['timecode_mm'] = String(Math.floor((currentTime % 3600) / 60)).padStart(2, '0')
-				globalVars['timecode_ss'] = String(Math.floor(currentTime % 60)).padStart(2, '0')
-				globalVars['timecode_ff'] = String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')
-
-				globalVars['remaining_timecode'] = formatTimecode(remaining)
-				globalVars['remaining_hh'] = String(Math.floor(remaining / 3600)).padStart(2, '0')
-				globalVars['remaining_mm'] = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0')
-				globalVars['remaining_ss'] = String(Math.floor(remaining % 60)).padStart(2, '0')
-				globalVars['remaining_ff'] = String(Math.floor((remaining % 1) * 100)).padStart(2, '0')
-			} else {
-				globalVars['clip_id'] = ''
-				globalVars['clip_name'] = ''
-				globalVars['status'] = 'idle'
-				globalVars['loop'] = 'off'
-				globalVars['timecode'] = '00:00:00.00'
-				globalVars['timecode_hh'] = '00'
-				globalVars['timecode_mm'] = '00'
-				globalVars['timecode_ss'] = '00'
-				globalVars['timecode_ff'] = '00'
-				globalVars['remaining_timecode'] = '00:00:00.00'
-				globalVars['remaining_hh'] = '00'
-				globalVars['remaining_mm'] = '00'
-				globalVars['remaining_ss'] = '00'
-				globalVars['remaining_ff'] = '00'
-			}
-
-			// Helper to format time as MM:SS
-			const formatTime = (seconds: number): string => {
-				if (!seconds || seconds <= 0) return ''
-				const mins = Math.floor(seconds / 60)
-				const secs = Math.floor(seconds % 60)
-				return `${mins}:${String(secs).padStart(2, '0')}`
-			}
-
-			// Update button status
-			this.buttonStatus = {}
-
-			carts.forEach((cart) => {
-				// Extract page and cart number from cart ID (format: page-0-cart-1)
-				const match = cart.id.match(/page-(\d+)-cart-(\d+)$/)
-				if (match) {
-					const pageNum = parseInt(match[1])
-					const cartNum = parseInt(match[2])
-					// Calculate flat button number: page 0 = 1-24, page 1 = 25-48, etc.
-					const buttonNum = pageNum * 24 + cartNum
-
-					this.buttonStatus[buttonNum] = {
-						state: cart.state,
-						label: cart.label || cart.fileName || '',
-						artist: cart.artist || '',
-						itemNumber: cart.itemNumber || '',
-						trackCount: cart.trackCount || 0,
-						timeRemaining: cart.timeRemaining || 0,
-						duration: cart.duration || 0,
-					}
-
-					globalVars[`button_${buttonNum}_state`] = cart.state
-					globalVars[`button_${buttonNum}_label`] = cart.label || cart.fileName || ''
-					globalVars[`button_${buttonNum}_artist`] = cart.artist || ''
-					globalVars[`button_${buttonNum}_item_number`] = cart.itemNumber || ''
-					globalVars[`button_${buttonNum}_track_count`] = cart.trackCount || 0
-					globalVars[`button_${buttonNum}_time_remaining`] = formatTime(cart.timeRemaining)
-					globalVars[`button_${buttonNum}_duration`] = formatTime(cart.duration)
-				}
-			})
-
-			this.setVariableValues(globalVars)
+		const changed = this.setChangedVariableValues(values)
+		if (changed.some((id) => id.endsWith('_state'))) {
 			this.checkFeedbacks('buttonState')
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : String(err)
-			this.log('debug', `Poll error: ${errorMessage}`)
 		}
+	}
+
+	/** Send only variables whose value differs from the last value Companion was given. */
+	private setChangedVariableValues(values: CompanionVariableValues): string[] {
+		const changed: CompanionVariableValues = {}
+		for (const [id, value] of Object.entries(values)) {
+			if (this.getVariableValue(id) !== value) changed[id] = value
+		}
+
+		const changedIds = Object.keys(changed)
+		if (changedIds.length > 0) this.setVariableValues(changed)
+		return changedIds
 	}
 }
 
