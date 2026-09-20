@@ -18,7 +18,7 @@ Control HotShot Cart professional audio cart player from Bitfocus Companion.
 | ----------------- | ---------------------------------------------- |
 | **Play Button**   | Start playback of a cart button (1-999)        |
 | **Stop Button**   | Stop playback of a cart button                 |
-| **Toggle Button** | Toggle play/stop state                         |
+| **Toggle Button** | Play if idle, fade out if playing              |
 | **Fade Button**   | Fade out with custom duration (0.1-30 seconds) |
 
 A button with **Solo Mode** enabled in HotShot Cart stops the other playing buttons when it starts, except the buttons it triggers. This applies to Play and Toggle from Companion with HotShot Cart 0.1.8 or later.

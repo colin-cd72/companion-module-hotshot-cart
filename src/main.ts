@@ -195,7 +195,7 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 			}
 
 			buttonStatus[buttonNumber] = cart
-			if (!playingCart && cart.state === 'playing') playingCart = cart
+			if (!playingCart && (cart.state === 'playing' || cart.state === 'fading')) playingCart = cart
 		}
 
 		// Build the full variable set so buttons that disappeared from the status revert to idle

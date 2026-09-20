@@ -15,7 +15,9 @@ export function GetFeedbacks(instance: HotShotCartInstance): CompanionFeedbackDe
 			},
 			callback: (feedback) => {
 				const buttonNumber = Number(feedback.options.buttonNumber)
-				return instance.buttonStatus[buttonNumber]?.state === 'playing'
+				const state = instance.buttonStatus[buttonNumber]?.state
+				// A fading button is still audible; keep it lit until it actually stops
+				return state === 'playing' || state === 'fading'
 			},
 		},
 	}

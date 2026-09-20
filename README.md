@@ -10,7 +10,7 @@ This module allows you to control HotShot Cart audio player from Bitfocus Compan
 
 - **Play Button** - Trigger playback of any cart button
 - **Stop Button** - Stop playback of any cart button
-- **Toggle Button** - Toggle play/stop state of any cart button
+- **Toggle Button** - Play a cart button if idle, fade it out if playing
 - **Fade Button** - Fade out a cart button with customizable duration
 - **Button State Feedback** - Visual feedback showing which buttons are currently playing
 - **Status Polling** - Real-time status updates from HotShot Cart
@@ -104,7 +104,7 @@ Stops playback of the specified button number.
 
 ### Toggle Button
 
-Toggles the play/stop state of the specified button number. When it starts playback, Solo Mode applies as for Play Button.
+Plays the specified button if it is idle, or fades it out (2 seconds) if it is playing. When it starts playback, Solo Mode applies as for Play Button.
 
 **Options:**
 
@@ -252,6 +252,11 @@ For issues and feature requests, please open an issue on GitHub.
 MIT License - See LICENSE file for details
 
 ## Version History
+
+### 1.2.2 (2026-09-20)
+
+- The Button Playing State feedback and the global clip variables now stay on while a button is fading out, not only while it is playing
+- Verified against HotShot Cart 0.1.11: the Fade Button action needs 0.1.11 or later (earlier versions rejected the request body Companion sends)
 
 ### 1.2.1 (2026-09-20)
 
