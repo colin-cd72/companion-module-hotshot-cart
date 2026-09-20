@@ -88,7 +88,7 @@ This module is written in TypeScript and follows the Bitfocus Companion TypeScri
 
 ### Play Button
 
-Starts playback of the specified button number.
+Starts playback of the specified button number. If the button has **Solo Mode** enabled in HotShot Cart, every other playing button is stopped first, except the buttons it triggers. Solo applies to Companion triggers from HotShot Cart 0.1.8 on; earlier versions only applied it to clicks in the app.
 
 **Options:**
 
@@ -104,7 +104,7 @@ Stops playback of the specified button number.
 
 ### Toggle Button
 
-Toggles the play/stop state of the specified button number.
+Toggles the play/stop state of the specified button number. When it starts playback, Solo Mode applies as for Play Button.
 
 **Options:**
 
@@ -203,7 +203,7 @@ The module includes ready-to-use presets:
 ## Requirements
 
 - Bitfocus Companion 3.0 or later
-- HotShot Cart application running with HTTP API enabled
+- HotShot Cart application running with HTTP API enabled (0.1.8 or later for Solo Mode to apply to Companion triggers)
 - If HotShot Cart requires API tokens, the same tokens entered in the module configuration
 - Network connectivity between Companion and HotShot Cart
 
@@ -252,6 +252,11 @@ For issues and feature requests, please open an issue on GitHub.
 MIT License - See LICENSE file for details
 
 ## Version History
+
+### 1.2.1 (2026-09-20)
+
+- Documented HotShot Cart 0.1.8 behavior: Play and Toggle now honor a button's **Solo Mode**, stopping the other playing buttons, the same as a click in the app. No API changes; the module works unchanged with 0.1.8
+- Action descriptions in Companion mention Solo Mode
 
 ### 1.2.0 (2026-09-19)
 

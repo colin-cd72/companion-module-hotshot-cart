@@ -14,6 +14,8 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 	return {
 		playButton: {
 			name: 'Play Button',
+			description:
+				'Start playback. From HotShot Cart 0.1.8 a button with Solo mode stops the other playing buttons, whether started here or in the app.',
 			options: [buttonNumberOption],
 			callback: async (action) => {
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/play`, 'POST')
@@ -28,6 +30,7 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 		},
 		toggleButton: {
 			name: 'Toggle Button',
+			description: 'Play if idle, fade if playing. Solo mode applies when it starts playback (HotShot Cart 0.1.8+).',
 			options: [buttonNumberOption],
 			callback: async (action) => {
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/toggle`, 'POST')
