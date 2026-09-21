@@ -13,6 +13,7 @@ import {
 	cartIdToButtonNumber,
 	summarizeCart,
 	type CartSummary,
+	type FlowState,
 	type StatusResponse,
 } from './api.js'
 import { GetConfigFields, type ModuleConfig } from './config.js'
@@ -21,6 +22,7 @@ import { GetPresets } from './presets.js'
 import {
 	GetButtonVariableValues,
 	GetDefaultVariableValues,
+	GetFlowVariableValues,
 	GetPlayerVariableValues,
 	GetVariableDefinitions,
 } from './variables.js'
@@ -31,6 +33,10 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 	public config!: ModuleConfig
 	/** Latest known status for each flat button number, refreshed by polling. */
 	public buttonStatus: Record<number, CartSummary> = {}
+	/** Latest chain state from `GET /api/flow`; idle when the app is older than 0.1.11. */
+	public flow: FlowState = { running: false }
+	/** Set once the app answers 404 for /api/flow, so old versions are not polled for it. */
+	private flowUnsupported = false
 
 	/** Number of buttons variables are currently registered for (Pages x Buttons Per Page). */
 	private buttonCount = 0
@@ -89,7 +95,12 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	async sendCommand(path: string, method: 'GET' | 'POST' = 'GET', body?: Record<string, unknown>): Promise<unknown> {
+	async sendCommand(
+		path: string,
+		method: 'GET' | 'POST' = 'GET',
+		body?: Record<string, unknown>,
+		options: { quiet404?: boolean } = {}
+	): Promise<unknown> {
 		const url = `http://${this.config.host}:${this.config.port}${path}`
 
 		const headers: Record<string, string> = {}
@@ -113,6 +124,7 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 		}
 
 		if (!response.ok) {
+			if (response.status === 404 && options.quiet404) return null
 			this.log('error', `HTTP ${response.status} ${response.statusText} for ${method} ${path}`)
 			this.updateStatus(InstanceStatus.UnknownWarning, `HTTP ${response.status}`)
 			return undefined
@@ -165,12 +177,30 @@ export class HotShotCartInstance extends InstanceBase<ModuleConfig> {
 			if (!statusData || typeof statusData !== 'object') return
 
 			this.applyStatus(statusData)
+			await this.pollFlow()
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err)
 			this.log('debug', `Poll error: ${message}`)
 		} finally {
 			this.pollInFlight = false
 		}
+	}
+
+	/** Chain state, on apps that have it. A 404 means an older app: stop asking. */
+	private async pollFlow(): Promise<void> {
+		if (this.flowUnsupported) return
+		const flow = (await this.sendCommand('/api/flow', 'GET', undefined, { quiet404: true })) as
+			FlowState | null | undefined
+		if (flow === null) {
+			this.flowUnsupported = true
+			this.log('info', 'This HotShot Cart has no chain (Flow) API; update to 0.1.11 or later for GO from Companion')
+			return
+		}
+		if (!flow || typeof flow !== 'object') return
+		const wasRunning = this.flow.running
+		this.flow = flow
+		this.setChangedVariableValues(GetFlowVariableValues(flow))
+		if (wasRunning !== !!flow.running) this.checkFeedbacks('flowRunning')
 	}
 
 	private applyStatus(statusData: StatusResponse): void {

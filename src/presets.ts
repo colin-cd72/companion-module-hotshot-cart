@@ -37,5 +37,22 @@ export function GetPresets(): CompanionPresetDefinitions {
 		presets[`toggle_${i}`] = buttonPreset('Toggle Buttons', `Toggle Button ${i}`, `${i}`, 'toggleButton', i)
 	}
 
+	presets.flow_go = {
+		type: 'button',
+		category: 'Chains (Flow)',
+		name: 'GO',
+		style: { text: 'GO\\n$(hotshot-cart:flow_next)', size: '14', color: 0xffffff, bgcolor: 0x003322 },
+		steps: [{ down: [{ actionId: 'flowGo', options: {} }], up: [] }],
+		feedbacks: [{ feedbackId: 'flowRunning', options: {} }],
+	}
+	presets.flow_hold = {
+		type: 'button',
+		category: 'Chains (Flow)',
+		name: 'Hold / Resume',
+		style: { text: 'HOLD', size: '18', color: 0xffffff, bgcolor: 0x222233 },
+		steps: [{ down: [{ actionId: 'flowHold', options: {} }], up: [] }],
+		feedbacks: [{ feedbackId: 'flowRunning', options: {} }],
+	}
+
 	return presets
 }

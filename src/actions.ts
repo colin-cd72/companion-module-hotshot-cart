@@ -36,6 +36,24 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 				await instance.sendCommand(`/api/button/${action.options.buttonNumber}/toggle`, 'POST')
 			},
 		},
+		flowGo: {
+			name: 'Flow: GO',
+			description:
+				"Advance the running chain now, exactly like Space in the app: crossfade, fade, gap or cut into the next button, or the chain's end action on the last one. Needs HotShot Cart 0.1.11+.",
+			options: [],
+			callback: async () => {
+				await instance.sendCommand('/api/flow/go', 'POST')
+			},
+		},
+		flowHold: {
+			name: 'Flow: Hold / Resume',
+			description:
+				"Pause the chain's playing button without advancing; press again to resume. Needs HotShot Cart 0.1.11+.",
+			options: [],
+			callback: async () => {
+				await instance.sendCommand('/api/flow/hold', 'POST')
+			},
+		},
 		fadeButton: {
 			name: 'Fade Button',
 			options: [

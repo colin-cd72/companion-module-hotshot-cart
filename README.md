@@ -110,6 +110,14 @@ Plays the specified button if it is idle, or fades it out (2 seconds) if it is p
 
 - Button Number (1-999)
 
+### Flow: GO
+
+Advances the running chain, exactly like Space in HotShot Cart: crossfade, fade, gap or cut into the next button, or the chain's "At the end" action on the last one. Nothing happens when no chain is running. Needs HotShot Cart 0.1.11 or later.
+
+### Flow: Hold / Resume
+
+Pauses the chain's playing button without advancing; again to resume. Needs HotShot Cart 0.1.11 or later.
+
 ### Fade Button
 
 Fades out the specified button over a custom duration.
@@ -120,6 +128,10 @@ Fades out the specified button over a custom duration.
 - Fade Duration (0.1-30.0 seconds)
 
 ## Feedbacks
+
+### Chain Running
+
+Lights a key while a chain is running; pair it with the Flow: GO action.
 
 ### Button Playing State
 
@@ -135,6 +147,14 @@ Changes the button appearance when the cart button is playing.
 - Text Color: Black (#000000)
 
 ## Variables
+
+### Chain (Flow) Variables
+
+- `$(hotshot-cart:flow_running)` - `true` while a chain is running
+- `$(hotshot-cart:flow_current)` - Name of the chain's playing button
+- `$(hotshot-cart:flow_next)` - Name of the next button in the chain
+- `$(hotshot-cart:flow_go)` - What GO will do, e.g. `Crossfade 3s` or `Pause (end of chain)`
+- `$(hotshot-cart:flow_paused)` - `true` while the chain is held
 
 ### Global Variables
 
@@ -216,6 +236,9 @@ This module uses the HotShot Cart HTTP API:
 - `POST /api/button/:number/stop` - Stop a button
 - `POST /api/button/:number/toggle` - Toggle a button
 - `POST /api/button/:number/fade` - Fade a button
+- `GET /api/flow` - The running chain (0.1.11+)
+- `POST /api/flow/go` - Advance the chain, like Space (0.1.11+)
+- `POST /api/flow/hold` - Hold or resume the chain's playing button (0.1.11+)
 
 ## Troubleshooting
 
@@ -252,6 +275,10 @@ For issues and feature requests, please open an issue on GitHub.
 MIT License - See LICENSE file for details
 
 ## Version History
+
+### 1.3.0 (2026-09-20)
+
+- Added **Flow: GO** and **Flow: Hold / Resume** actions, a **Chain Running** feedback, `flow_*` variables and two presets, so a Stream Deck key or footswitch advances a HotShot Cart chain the way Space does. Needs HotShot Cart 0.1.11; older versions are detected and simply not polled for it
 
 ### 1.2.2 (2026-09-20)
 

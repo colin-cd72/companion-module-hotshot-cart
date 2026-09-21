@@ -1,5 +1,5 @@
 import type { CompanionVariableDefinition, CompanionVariableValues } from '@companion-module/base'
-import { formatTime, formatTimecode, splitTimecode, type CartSummary } from './api.js'
+import { formatTime, formatTimecode, splitTimecode, type CartSummary, type FlowState } from './api.js'
 
 const BUTTON_VARIABLES: ReadonlyArray<[suffix: string, name: string]> = [
 	['state', 'State'],
@@ -27,6 +27,11 @@ export function GetVariableDefinitions(buttonCount: number): CompanionVariableDe
 		{ variableId: 'remaining_mm', name: 'Remaining Minutes' },
 		{ variableId: 'remaining_ss', name: 'Remaining Seconds' },
 		{ variableId: 'remaining_ff', name: 'Remaining Frames' },
+		{ variableId: 'flow_running', name: 'Chain Running (true/false)' },
+		{ variableId: 'flow_current', name: 'Chain: Playing Button' },
+		{ variableId: 'flow_next', name: 'Chain: Next Button' },
+		{ variableId: 'flow_go', name: 'Chain: What GO Will Do' },
+		{ variableId: 'flow_paused', name: 'Chain: Held (true/false)' },
 	]
 
 	for (let i = 1; i <= buttonCount; i++) {
@@ -74,9 +79,21 @@ export function GetButtonVariableValues(buttonNumber: number, cart?: CartSummary
 	}
 }
 
+/** Chain variables from `GET /api/flow`, or idle values when the app has no chain running (or is too old). */
+export function GetFlowVariableValues(flow?: FlowState): CompanionVariableValues {
+	const running = !!flow?.running
+	return {
+		flow_running: running ? 'true' : 'false',
+		flow_current: running ? (flow?.currentLabel ?? '') : '',
+		flow_next: running ? (flow?.nextLabel ?? '') : '',
+		flow_go: running ? (flow?.goLabel ?? '') : '',
+		flow_paused: running && flow?.paused ? 'true' : 'false',
+	}
+}
+
 /** Every variable at its idle value, used until the first status poll arrives. */
 export function GetDefaultVariableValues(buttonCount: number): CompanionVariableValues {
-	const values = GetPlayerVariableValues()
+	const values = { ...GetPlayerVariableValues(), ...GetFlowVariableValues() }
 	for (let i = 1; i <= buttonCount; i++) {
 		Object.assign(values, GetButtonVariableValues(i))
 	}

@@ -120,3 +120,14 @@ export function formatTime(seconds: number): string {
 	const secs = Math.floor(seconds % 60)
 	return `${mins}:${pad2(secs)}`
 }
+
+/** `GET /api/flow`: the running chain, as reported by HotShot Cart 0.1.11+. */
+export interface FlowState {
+	running: boolean
+	currentCartId?: string | null
+	currentLabel?: string | null
+	nextCartId?: string | null
+	nextLabel?: string | null
+	goLabel?: string | null
+	paused?: boolean
+}

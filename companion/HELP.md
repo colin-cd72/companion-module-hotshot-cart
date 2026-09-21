@@ -14,12 +14,14 @@ Control HotShot Cart professional audio cart player from Bitfocus Companion.
 
 ## Actions
 
-| Action            | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| **Play Button**   | Start playback of a cart button (1-999)        |
-| **Stop Button**   | Stop playback of a cart button                 |
-| **Toggle Button** | Play if idle, fade out if playing              |
-| **Fade Button**   | Fade out with custom duration (0.1-30 seconds) |
+| Action            | Description                                         |
+| ----------------- | --------------------------------------------------- |
+| **Play Button**   | Start playback of a cart button (1-999)             |
+| **Stop Button**   | Stop playback of a cart button                      |
+| **Toggle Button** | Play if idle, fade out if playing                   |
+| **Fade Button**   | Fade out with custom duration (0.1-30 seconds)      |
+| **Flow: GO**      | Advance the running chain, like Space (0.1.11+)     |
+| **Flow: Hold**    | Hold or resume the chain's playing button (0.1.11+) |
 
 A button with **Solo Mode** enabled in HotShot Cart stops the other playing buttons when it starts, except the buttons it triggers. This applies to Play and Toggle from Companion with HotShot Cart 0.1.8 or later.
 
@@ -28,8 +30,13 @@ A button with **Solo Mode** enabled in HotShot Cart stops the other playing butt
 | Feedback                 | Description                                      |
 | ------------------------ | ------------------------------------------------ |
 | **Button Playing State** | Shows green when the specified button is playing |
+| **Chain Running**        | Lit while a chain (Flow) is running              |
 
 ## Variables
+
+### Chain (Flow) Variables
+
+- `$(hotshot-cart:flow_running)`, `flow_current`, `flow_next`, `flow_go`, `flow_paused`
 
 ### Global Variables
 

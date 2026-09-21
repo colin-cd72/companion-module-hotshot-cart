@@ -4,6 +4,17 @@ import type { HotShotCartInstance } from './main.js'
 
 export function GetFeedbacks(instance: HotShotCartInstance): CompanionFeedbackDefinitions {
 	return {
+		flowRunning: {
+			type: 'boolean',
+			name: 'Chain Running',
+			description: 'True while a chain (Flow) is running, so a GO key can light up',
+			options: [],
+			defaultStyle: {
+				bgcolor: 0x00c46a,
+				color: 0x000000,
+			},
+			callback: () => instance.flow.running,
+		},
 		buttonState: {
 			type: 'boolean',
 			name: 'Button Playing State',
