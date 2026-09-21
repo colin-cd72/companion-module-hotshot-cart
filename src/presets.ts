@@ -54,5 +54,14 @@ export function GetPresets(): CompanionPresetDefinitions {
 		feedbacks: [{ feedbackId: 'flowRunning', options: {} }],
 	}
 
+	presets.stop_all = {
+		type: 'button',
+		category: 'Chains (Flow)',
+		name: 'Stop All',
+		style: { text: 'STOP\\nALL', size: '18', color: 0xffffff, bgcolor: 0xaa0000 },
+		steps: [{ down: [{ actionId: 'stopAll', options: {} }], up: [] }],
+		feedbacks: [],
+	}
+
 	return presets
 }

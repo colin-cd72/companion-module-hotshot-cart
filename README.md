@@ -12,6 +12,7 @@ This module allows you to control HotShot Cart audio player from Bitfocus Compan
 - **Stop Button** - Stop playback of any cart button
 - **Toggle Button** - Play a cart button if idle, fade it out if playing
 - **Fade Button** - Fade out a cart button with customizable duration
+- **Flow: GO / Hold** and **Stop All** - Advance or hold a HotShot Cart chain, or stop everything (HotShot Cart 0.1.11+)
 - **Button State Feedback** - Visual feedback showing which buttons are currently playing
 - **Status Polling** - Real-time status updates from HotShot Cart
 - **Variables** - Access button state and labels as variables for dynamic button text
@@ -117,6 +118,10 @@ Advances the running chain, exactly like Space in HotShot Cart: crossfade, fade,
 ### Flow: Hold / Resume
 
 Pauses the chain's playing button without advancing; again to resume. Needs HotShot Cart 0.1.11 or later.
+
+### Stop All
+
+The panic button: stops every playing button at once and ends any running chain, the same as **STOP ALL** or Escape in HotShot Cart. Needs HotShot Cart 0.1.11 or later.
 
 ### Fade Button
 
@@ -239,6 +244,7 @@ This module uses the HotShot Cart HTTP API:
 - `GET /api/flow` - The running chain (0.1.11+)
 - `POST /api/flow/go` - Advance the chain, like Space (0.1.11+)
 - `POST /api/flow/hold` - Hold or resume the chain's playing button (0.1.11+)
+- `POST /api/stop-all` - Stop every playing button and end the chain (0.1.11+)
 
 ## Troubleshooting
 
@@ -279,6 +285,7 @@ MIT License - See LICENSE file for details
 ### 1.3.0 (2026-09-20)
 
 - Added **Flow: GO** and **Flow: Hold / Resume** actions, a **Chain Running** feedback, `flow_*` variables and two presets, so a Stream Deck key or footswitch advances a HotShot Cart chain the way Space does. Needs HotShot Cart 0.1.11; older versions are detected and simply not polled for it
+- Added a **Stop All** action and preset (the app's panic button: every playing button stops and the chain ends). Needs HotShot Cart 0.1.11
 
 ### 1.2.2 (2026-09-20)
 

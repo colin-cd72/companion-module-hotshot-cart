@@ -54,6 +54,15 @@ export function GetActions(instance: HotShotCartInstance): CompanionActionDefini
 				await instance.sendCommand('/api/flow/hold', 'POST')
 			},
 		},
+		stopAll: {
+			name: 'Stop All',
+			description:
+				'Panic button: stops every playing button at once and ends any running chain, the same as STOP ALL or Escape in the app. Needs HotShot Cart 0.1.11+.',
+			options: [],
+			callback: async () => {
+				await instance.sendCommand('/api/stop-all', 'POST')
+			},
+		},
 		fadeButton: {
 			name: 'Fade Button',
 			options: [
