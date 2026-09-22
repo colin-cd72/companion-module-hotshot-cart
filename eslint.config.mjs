@@ -2,5 +2,5 @@ import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
 
 export default generateEslintConfig({
 	enableTypescript: true,
-	ignores: ['audio-cart-player/'],
+	ignores: ['audio-cart-player/', '.claude/'],
 })

@@ -9,6 +9,10 @@ export interface ModuleConfig {
 	controlApiToken: string
 	enablePolling: boolean
 	pollInterval: number
+	useWebSocket: boolean
+	pairingCode: string
+	/** Device token from `POST /api/remote/pair`; stored by the module, not typed by the user. */
+	deviceToken: string
 }
 
 export function GetConfigFields(): SomeCompanionConfigField[] {
@@ -18,7 +22,8 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'info',
 			width: 12,
 			label: 'Information',
-			value: 'This module controls HotShot Cart audio player via HTTP API',
+			value:
+				'This module controls HotShot Cart audio player via HTTP API. With HotShot Cart 0.2.0 or later it also receives live status over a WebSocket instead of polling.',
 		},
 		{
 			type: 'textinput',
@@ -74,8 +79,37 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 		},
 		{
 			type: 'checkbox',
+			id: 'useWebSocket',
+			label: 'Use live WebSocket (0.2.0+)',
+			tooltip:
+				'Receive status pushed by HotShot Cart 0.2.0 or later instead of polling. Needs the Control API Token (when "Require API Token" is on) or a pairing code. Falls back to polling when the WebSocket is unavailable.',
+			width: 6,
+			default: true,
+		},
+		{
+			type: 'textinput',
+			id: 'pairingCode',
+			label: 'Pairing code',
+			tooltip:
+				'The code shown in HotShot Cart under Settings > Control > Remote. Used once to pair, then cleared; the module keeps the device token it receives. Not needed when a Control API Token is set.',
+			width: 6,
+			default: '',
+			isVisible: (options) => !!options.useWebSocket,
+		},
+		{
+			type: 'textinput',
+			id: 'deviceToken',
+			label: 'Device token',
+			width: 6,
+			default: '',
+			// Filled in by the module after pairing; never shown or edited by hand
+			isVisible: () => false,
+		},
+		{
+			type: 'checkbox',
 			id: 'enablePolling',
 			label: 'Enable Status Polling',
+			tooltip: 'Poll GET /api/status. Used when the live WebSocket is off or unavailable (older HotShot Cart).',
 			width: 6,
 			default: true,
 		},

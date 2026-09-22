@@ -7,7 +7,7 @@
   "manufacturer": "Fat Brain Group",
   "products": ["HotShot Cart"],
   "keywords": ["audio", "cart", "player", "broadcast", "playout"],
-  "version": "0.0.0",
+  "version": "1.4.0",
   "license": "MIT",
   "repository": "git+https://github.com/colin-cd72/companion-module-hotshot-cart.git",
   "bugs": "https://github.com/colin-cd72/companion-module-hotshot-cart/issues",
