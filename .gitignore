@@ -4,3 +4,7 @@ dist/
 *.log
 npm-debug.log*
 package-lock.json
+
+# Build outputs of companion-module-build
+pkg/
+*.tgz

@@ -1,12 +1,21 @@
 {
   "id": "hotshot-cart",
+  "legacyIds": [],
   "manifestVersion": 1,
   "name": "HotShot Cart",
   "shortname": "HotShot Cart",
   "description": "Control HotShot Cart professional audio cart player",
   "manufacturer": "Fat Brain Group",
-  "products": ["HotShot Cart"],
-  "keywords": ["audio", "cart", "player", "broadcast", "playout"],
+  "products": [
+    "HotShot Cart"
+  ],
+  "keywords": [
+    "audio",
+    "cart",
+    "player",
+    "broadcast",
+    "playout"
+  ],
   "version": "1.4.0",
   "license": "MIT",
   "repository": "git+https://github.com/colin-cd72/companion-module-hotshot-cart.git",
