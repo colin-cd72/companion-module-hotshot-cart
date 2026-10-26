@@ -8,3 +8,5 @@ package-lock.json
 # Build outputs of companion-module-build
 pkg/
 *.tgz
+.playwright-mcp/
+audio-cart-player/
